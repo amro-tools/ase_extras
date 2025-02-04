@@ -1,0 +1,16 @@
+[project]
+name = "ase_extras"
+version = "0.0.1"
+description = "Utilities for ASE."
+
+authors = [
+    {name = "Amrita Goswami", email = "amrita16thaug646@gmail.com"},
+    {name = "Moritz Sallermann", email = "moritzsallermann@gmail.com"},
+]
+
+dependencies = [
+    "ase>=1.23",
+]
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT"}
