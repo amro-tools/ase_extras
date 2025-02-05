@@ -14,6 +14,8 @@ class PropertyWriter:
         self.file = file
 
         for p in properties:
+            if p == "energy":
+                p = "potential_energy"  # Rename this
             self.record[p] = []
 
     def log(self):
