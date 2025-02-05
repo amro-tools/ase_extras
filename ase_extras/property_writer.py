@@ -2,21 +2,27 @@ import json
 from typing import Optional
 from pathlib import Path
 from ase import Atoms
+from ase.optimize.optimize import Dynamics
 
 
 class PropertyWriter:
     def __init__(
-        self, atoms: Atoms, properties: list[str] = [""], file: Optional[Path] = None
+        self,
+        atoms: Atoms,
+        properties: list[str] = [""],
+        file: Optional[Path] = None,
+        dyn: Optional[Dynamics] = None,
     ):
         self.atoms = atoms
         self.record = dict()
         self.properties = properties
         self.file = file
+        self.dyn = dyn
 
-        for p in properties:
-            if p == "energy":
-                p = "potential_energy"  # Rename this
-            self.record[p] = []
+        self.record_keys = self.get_record_keys()
+
+        for k in self.record_keys:
+            self.record[k] = []
 
         if not self.file is None:
             self._write_header(self.file)
@@ -33,7 +39,7 @@ class PropertyWriter:
 
     def _write_header(self, file):
         with open(file, "w") as f:
-            f.write(PropertyWriter.to_csv_row(self.record.keys()))
+            f.write(PropertyWriter.to_csv_row(self.record_keys))
 
     def log(self):
         results = self.get_property()
@@ -45,9 +51,20 @@ class PropertyWriter:
         with open(self.file, "a") as f:
             f.write(PropertyWriter.to_csv_row(results.values()))
 
+    def get_record_keys(self):
+        keys = []
+        if not self.dyn is None:
+            keys.append("nsteps")
+
+        for p in self.properties:
+            if p == "energy":
+                p = "potential_energy"  # Rename this
+            keys.append(p)
+        return keys
+
     def get_property(self):
         results = {}
-        for p in self.properties:
+        for p in self.record_keys:
             if p == "total_energy":
                 kin_energy = self.atoms.get_kinetic_energy()
                 pot_energy = self.atoms.calc.results["energy"]
@@ -58,9 +75,11 @@ class PropertyWriter:
             elif p == "temperature":
                 temp = self.atoms.get_temperature()
                 results[p] = temp
-            elif p == "potential_energy" or "energy":
+            elif p == "potential_energy":
                 pot_energy = self.atoms.calc.results["energy"]
                 results["potential_energy"] = pot_energy
+            elif p == "nsteps":
+                results[p] = self.dyn.nsteps
             else:
                 try:
                     r = self.atoms.calc.results[p]

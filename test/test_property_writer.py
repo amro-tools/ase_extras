@@ -61,6 +61,7 @@ def test_property_writer():
         atoms,
         properties=["energy", "temperature", "total_energy", "kinetic_energy"],
         file="properties.csv",
+        dyn=dyn,
     )
 
     dyn.attach(writer.log, interval=1)
@@ -86,5 +87,5 @@ def test_property_writer():
     assert np.isclose(from_json["kinetic_energy"][-1], kinetic_energy)
 
 
-if __name__ == "__main__ ":
+if __name__ == "__main__":
     test_property_writer()
