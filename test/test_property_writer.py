@@ -34,7 +34,7 @@ def construct_calculator(atoms):
 
 
 def test_property_writer():
-    n_iter = 3
+    n_iter = 10
     input_xyz = Path(__file__).parent / "resources/system.xyz"
     temperature = 300
     logfile = "log.txt"
@@ -65,7 +65,7 @@ def test_property_writer():
     )
 
     dyn.attach(writer.log, interval=1)
-    dyn.attach(writer.log_to_file, interval=1)
+    dyn.attach(writer.log_to_file, interval=2)
 
     constrain_water(atoms)
     dyn.run(steps=n_iter)
