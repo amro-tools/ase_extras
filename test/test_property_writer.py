@@ -58,15 +58,19 @@ def test_property_writer():
     )
 
     writer = PropertyWriter(
-        atoms, properties=["energy", "temperature", "total_energy", "kinetic_energy"]
+        atoms,
+        properties=["energy", "temperature", "total_energy", "kinetic_energy"],
+        file="properties.csv",
     )
 
     dyn.attach(writer.log, interval=1)
+    dyn.attach(writer.log_to_file, interval=1)
+
     constrain_water(atoms)
     dyn.run(steps=n_iter)
     dyn.close()
 
-    writer.save("properties.json")
+    writer.save_to_json("properties.json")
 
     temperature_fin = atoms.get_temperature()
     total_energy = atoms.get_total_energy()

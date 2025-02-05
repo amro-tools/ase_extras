@@ -18,10 +18,32 @@ class PropertyWriter:
                 p = "potential_energy"  # Rename this
             self.record[p] = []
 
+        if not self.file is None:
+            self._write_header(self.file)
+
+    @classmethod
+    def to_csv_row(cls, items: list, sep=","):
+        res = ""
+        for i, item in enumerate(items):
+            res += str(item)
+            if i != len(items) - 1:
+                res += sep
+        res += "\n"
+        return res
+
+    def _write_header(self, file):
+        with open(file, "w") as f:
+            f.write(PropertyWriter.to_csv_row(self.record.keys()))
+
     def log(self):
         results = self.get_property()
         for p, v in results.items():
             self.record[p].append(v)
+
+    def log_to_file(self):
+        results = self.get_property()
+        with open(self.file, "a") as f:
+            f.write(PropertyWriter.to_csv_row(results.values()))
 
     def get_property(self):
         results = {}
@@ -47,10 +69,6 @@ class PropertyWriter:
                     print(f"Calculator does not have property {p}")
         return results
 
-    def save(self, file: Path):
+    def save_to_json(self, file: Path):
         with open(file, "w") as f:
             json.dump(self.record, f, indent=4)
-
-    def __del__(self):
-        if not self.file is None:
-            self.save(self.file)
