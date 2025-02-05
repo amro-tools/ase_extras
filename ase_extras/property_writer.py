@@ -19,26 +19,33 @@ class PropertyWriter:
             self.record[p] = []
 
     def log(self):
+        results = self.get_property()
+        for p, v in results.items():
+            self.record[p].append(v)
+
+    def get_property(self):
+        results = {}
         for p in self.properties:
             if p == "total_energy":
                 kin_energy = self.atoms.get_kinetic_energy()
                 pot_energy = self.atoms.calc.results["energy"]
-                self.record[p].append(kin_energy + pot_energy)
+                results[p] = kin_energy + pot_energy
             elif p == "kinetic_energy":
                 kin_energy = self.atoms.get_kinetic_energy()
-                self.record[p].append(kin_energy)
+                results[p] = kin_energy
             elif p == "temperature":
                 temp = self.atoms.get_temperature()
-                self.record[p].append(temp)
+                results[p] = temp
             elif p == "potential_energy" or "energy":
                 pot_energy = self.atoms.calc.results["energy"]
-                self.record["potential_energy"].append(pot_energy)
+                results["potential_energy"] = pot_energy
             else:
                 try:
                     r = self.atoms.calc.results[p]
-                    self.record[p].append(r)
+                    results[p] = r
                 except:
                     print(f"Calculator does not have property {p}")
+        return results
 
     def save(self, file: Path):
         with open(file, "w") as f:
