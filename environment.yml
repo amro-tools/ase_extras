@@ -1,0 +1,7 @@
+name: ase_extras_env
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - ase>=3.22.1
+  - pytest

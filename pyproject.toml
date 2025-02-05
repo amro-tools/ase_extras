@@ -9,7 +9,7 @@ authors = [
 ]
 
 dependencies = [
-    "ase>=1.23",
+    "ase>=3.22.1",
 ]
 requires-python = ">=3.9"
 readme = "README.md"
