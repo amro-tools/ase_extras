@@ -86,6 +86,14 @@ def test_property_writer():
     assert np.isclose(from_json["total_energy"][-1], total_energy)
     assert np.isclose(from_json["kinetic_energy"][-1], kinetic_energy)
 
+    # Test that the CSV works
+    data = np.loadtxt("properties.csv", skiprows=1, delimiter=",")
+    assert np.isclose(data[-1, 0], n_iter)  # nsteps
+    assert np.isclose(data[-1, 1], potential_energy)
+    assert np.isclose(data[-1, 2], temperature_fin)
+    assert np.isclose(data[-1, 3], total_energy)
+    assert np.isclose(data[-1, 4], kinetic_energy)
+
 
 if __name__ == "__main__":
     test_property_writer()
