@@ -33,6 +33,10 @@ def construct_calculator(atoms):
     return TIP4P()
 
 
+def custom_property(atoms, dyn):
+    return atoms.get_potential_energy() + 1.0
+
+
 def test_property_writer():
     n_iter = 10
     input_xyz = Path(__file__).parent / "resources/system.xyz"
@@ -59,7 +63,14 @@ def test_property_writer():
 
     writer = PropertyWriter(
         atoms,
-        properties=["energy", "temperature", "total_energy", "kinetic_energy"],
+        properties=[
+            "nsteps",
+            "potential_energy",
+            "temperature",
+            "total_energy",
+            "kinetic_energy",
+        ],
+        callback_properties=[("energy_plus_one", custom_property)],
         file="properties.csv",
         dyn=dyn,
     )
@@ -77,6 +88,7 @@ def test_property_writer():
     total_energy = atoms.get_total_energy()
     kinetic_energy = atoms.get_kinetic_energy()
     potential_energy = atoms.get_potential_energy()
+    energy_plus_one = potential_energy + 1.0
 
     with open("properties.json", "r") as f:
         from_json = json.load(f)
@@ -85,6 +97,7 @@ def test_property_writer():
     assert np.isclose(from_json["potential_energy"][-1], potential_energy)
     assert np.isclose(from_json["total_energy"][-1], total_energy)
     assert np.isclose(from_json["kinetic_energy"][-1], kinetic_energy)
+    assert np.isclose(from_json["energy_plus_one"][-1], energy_plus_one)
 
     # Test that the CSV works
     data = np.loadtxt("properties.csv", skiprows=1, delimiter=",")
@@ -93,6 +106,7 @@ def test_property_writer():
     assert np.isclose(data[-1, 2], temperature_fin)
     assert np.isclose(data[-1, 3], total_energy)
     assert np.isclose(data[-1, 4], kinetic_energy)
+    assert np.isclose(data[-1, 5], energy_plus_one)
 
 
 if __name__ == "__main__":

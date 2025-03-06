@@ -3,6 +3,8 @@ from typing import Optional
 from pathlib import Path
 from ase import Atoms
 from ase.optimize.optimize import Dynamics
+from typing import Callable, Any
+import warnings
 
 
 class PropertyWriter:
@@ -10,6 +12,9 @@ class PropertyWriter:
         self,
         atoms: Atoms,
         properties: list[str] = [""],
+        callback_properties: Optional[
+            list[tuple[str, Callable[[Atoms, Dynamics], Any]]]
+        ] = None,
         file: Optional[Path] = None,
         dyn: Optional[Dynamics] = None,
     ):
@@ -19,8 +24,14 @@ class PropertyWriter:
         self.file = file
         self.dyn = dyn
 
-        self.record_keys = self.get_record_keys()
+        self.callback_properties = self._create_callbacks()
 
+        if not callback_properties is None:
+            self.callback_properties += callback_properties
+
+        self.record_keys = self.validate_keys()
+
+        self.record = {}
         for k in self.record_keys:
             self.record[k] = []
 
@@ -51,41 +62,81 @@ class PropertyWriter:
         with open(self.file, "a") as f:
             f.write(PropertyWriter.to_csv_row(results.values()))
 
-    def get_record_keys(self):
+    def validate_keys(self):
+        """Make sure you don't have duplicate keys (multiple keys in properties, callback_properties or keys in both)
+
+        Raises:
+            Exception: If you have duplicate keys
+        """
         keys = []
-        if not self.dyn is None:
-            keys.append("nsteps")
+        for property_name, callback in self.callback_properties:
+            keys.append(property_name)
+        record_keys_unique = set(keys)
+        if len(record_keys_unique) != len(keys):
+            raise Exception(
+                "Duplicate keys. You cannot have the same key inside properties and callback_properties or in properties."
+            )
+        return keys
+
+    def _create_callbacks(self):
+        # creates predefined callbacks for each property in properties
+        callback_properties = []
 
         for p in self.properties:
-            if p == "energy":
-                p = "potential_energy"  # Rename this
-            keys.append(p)
-        return keys
+            if p == "total_energy":
+
+                def callback(atoms, dyn):
+                    kin_energy = atoms.get_kinetic_energy()
+                    pot_energy = atoms.calc.results["energy"]
+                    return pot_energy + kin_energy
+
+                callback_properties.append((p, callback))
+
+            elif p == "kinetic_energy":
+
+                def callback(atoms, dyn):
+                    kin_energy = atoms.get_kinetic_energy()
+                    return kin_energy
+
+                callback_properties.append((p, callback))
+
+            elif p == "temperature":
+
+                def callback(atoms, dyn):
+                    return atoms.get_temperature()
+
+                callback_properties.append((p, callback))
+
+            elif p == "potential_energy":
+
+                def callback(atoms, dyn):
+                    return atoms.calc.results["energy"]
+
+                callback_properties.append((p, callback))
+
+            elif p == "nsteps":
+
+                def callback(atoms, dyn):
+                    return dyn.nsteps
+
+                callback_properties.append((p, callback))
+            else:
+                raise Exception(
+                    f"{p} does not have a predefined callback. You cannot put it inside properties but you may define a custom callback and put it in callback_properties"
+                )
+
+        return callback_properties
 
     def get_property(self):
         results = {}
-        for p in self.record_keys:
-            if p == "total_energy":
-                kin_energy = self.atoms.get_kinetic_energy()
-                pot_energy = self.atoms.calc.results["energy"]
-                results[p] = kin_energy + pot_energy
-            elif p == "kinetic_energy":
-                kin_energy = self.atoms.get_kinetic_energy()
-                results[p] = kin_energy
-            elif p == "temperature":
-                temp = self.atoms.get_temperature()
-                results[p] = temp
-            elif p == "potential_energy":
-                pot_energy = self.atoms.calc.results["energy"]
-                results["potential_energy"] = pot_energy
-            elif p == "nsteps":
-                results[p] = self.dyn.nsteps
-            else:
-                try:
-                    r = self.atoms.calc.results[p]
-                    results[p] = r
-                except:
-                    print(f"Calculator does not have property {p}")
+        for property_name, callback in self.callback_properties:
+            try:
+                results[property_name] = callback(self.atoms, self.dyn)
+            except:
+                results[property_name] = float("nan")
+                warnings.warn(
+                    f"Error when computing property {property_name}. Setting to nan"
+                )
         return results
 
     def save_to_json(self, file: Path):
