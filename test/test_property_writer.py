@@ -7,6 +7,8 @@ from ase.constraints import FixBondLengths
 from pathlib import Path
 import json
 
+import pytest
+
 import numpy as np
 
 
@@ -35,6 +37,16 @@ def construct_calculator(atoms):
 
 def custom_property(atoms, dyn):
     return atoms.get_potential_energy() + 1.0
+
+
+class EvilException(Exception):
+    "EvilException"
+    ...
+
+
+def custom_property_with_exception(atoms, dyn):
+    raise EvilException("I am evil!")
+    return 1.0
 
 
 def test_property_writer():
@@ -70,7 +82,10 @@ def test_property_writer():
             "total_energy",
             "kinetic_energy",
         ],
-        callback_properties=[("energy_plus_one", custom_property)],
+        callback_properties=[
+            ("energy_plus_one", custom_property),
+            ("evil_property", custom_property_with_exception),
+        ],
         file="properties.csv",
         dyn=dyn,
     )
@@ -98,6 +113,7 @@ def test_property_writer():
     assert np.isclose(from_json["total_energy"][-1], total_energy)
     assert np.isclose(from_json["kinetic_energy"][-1], kinetic_energy)
     assert np.isclose(from_json["energy_plus_one"][-1], energy_plus_one)
+    assert np.isnan(from_json["evil_property"][-1])
 
     # Test that the CSV works
     data = np.loadtxt("properties.csv", skiprows=1, delimiter=",")
@@ -107,6 +123,11 @@ def test_property_writer():
     assert np.isclose(data[-1, 3], total_energy)
     assert np.isclose(data[-1, 4], kinetic_energy)
     assert np.isclose(data[-1, 5], energy_plus_one)
+
+    # with rethrow set to True, the writer should actually rethrow the EvilException
+    writer.rethrow = True
+    with pytest.raises(EvilException):
+        writer.log()
 
 
 if __name__ == "__main__":

@@ -24,6 +24,8 @@ class PropertyWriter:
         self.file = file
         self.dyn = dyn
 
+        self.rethrow = False
+
         self.callback_properties = self._create_callbacks()
 
         if not callback_properties is None:
@@ -132,11 +134,17 @@ class PropertyWriter:
         for property_name, callback in self.callback_properties:
             try:
                 results[property_name] = callback(self.atoms, self.dyn)
-            except:
+            except Exception as err:
                 results[property_name] = float("nan")
                 warnings.warn(
                     f"Error when computing property {property_name}. Setting to nan"
                 )
+                warnings.warn(f"Unexpected {err=}, {type(err)=}")
+
+                # if rethrow is set to true, we raise the exception again, so that it may be handled higher up
+                if self.rethrow:
+                    raise err
+
         return results
 
     def save_to_json(self, file: Path):
